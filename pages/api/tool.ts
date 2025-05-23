@@ -1,6 +1,7 @@
 // pages/api/tool.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSubjectGroups } from '@/app/lib/tools/getSubjectGroups';
+import { getSelectSubjects } from '@/app/lib/tools/getSelectsubject';
 import { getInterestsByGroup } from '@/app/lib/tools/getInterestsByGroup';
 import { getCoursesByInterest } from '@/app/lib/tools/getCoursesByInterest';
 import { getCollegesByCourse } from '@/app/lib/tools/getCollegesByCourse';
@@ -15,6 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (tool) {
       case 'subject_group':
         return res.json(await getSubjectGroups());
+      case 'subject':
+        return res.json(await getSelectSubjects(input));
       case 'interest':
         return res.json(await getInterestsByGroup(input));
       case 'course':
