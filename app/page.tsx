@@ -1,11 +1,11 @@
 // page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Import useEffect
 
 export default function CareerCounselorPage() {
   const [group, setGroup] = useState('');
-  const [subjects, setSubjects] = useState<string[]>([]); // This state is still useful for display
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [customSubject, setCustomSubject] = useState('');
   const [interest, setInterest] = useState('');
   const [course, setCourse] = useState('');
@@ -17,86 +17,128 @@ export default function CareerCounselorPage() {
   const [options, setOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({});
 
+  // NEW: State to store the base URL for API calls
+  const [baseUrl, setBaseUrl] = useState('');
+
+  // NEW: useEffect to set the base URL once the component mounts on the client
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setBaseUrl(window.location.origin);
+    }
+  }, []); // Empty dependency array means this runs once on mount
+
   const callTool = async (tool: string, input?: any) => {
-    const res = await fetch('/api/tool', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tool, input }),
-    });
-    return res.json();
+    // Construct the full URL using the baseUrl
+    // If baseUrl is not yet available (e.g., during initial server render before useEffect),
+    // it will default to an empty string, causing /api/tool to be relative.
+    // This is generally handled by Next.js in development, but for robust production,
+    // ensure server-side calls have an absolute URL or use environment variables.
+    const url = `${baseUrl}/api/tool`;
+
+    // Added a check to log if baseUrl is missing on the client side
+    // This won't directly fix SSR issues, but helps debug if client fetch fails
+    if (!baseUrl && typeof window !== 'undefined') {
+      console.warn('Base URL not yet set for API call on client. This might cause issues if not configured.');
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool, input }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(`API call failed for tool "${tool}": ${errorData.error || res.statusText}`);
+      }
+
+      return res.json();
+    } catch (error) {
+      console.error(`Error in callTool (${tool}):`, error);
+      // Depending on your error handling strategy, you might want to re-throw or return a default
+      throw error; // Re-throw to propagate the error for client-side handling
+    }
   };
 
   const handleNext = async (value?: string) => {
-    switch (step) {
-      case 0:
-        setGroup(value!);
-        const subjectsInitial = await callTool('subject', value); // Renamed to avoid conflict
-        setOptions(subjectsInitial);
-        // Initialize selectedOptions with all false
-        setSelectedOptions(subjectsInitial.reduce((acc: Record<string, boolean>, curr: string) => {
-          acc[curr] = false;
-          return acc;
-        }, {}));
-        setStep(1);
-        break;
-      case 1:
-        // Get all selected subjects
-        const selectedSubjectsForInterest = Object.entries(selectedOptions) // Renamed for clarity
-          .filter(([_, isChecked]) => isChecked)
-          .map(([subject]) => subject);
+    try { // Added a try-catch block for overall error handling in handleNext
+      switch (step) {
+        case 0:
+          setGroup(value!);
+          // Renamed local variable to avoid confusion with state 'subjects'
+          const fetchedSubjects = await callTool('subject', value);
+          setOptions(fetchedSubjects);
+          // Initialize selectedOptions with all false
+          setSelectedOptions(fetchedSubjects.reduce((acc: Record<string, boolean>, curr: string) => {
+            acc[curr] = false;
+            return acc;
+          }, {}));
+          setStep(1);
+          break;
+        case 1:
+          // Get all selected subjects from selectedOptions state
+          const currentlySelectedSubjects = Object.entries(selectedOptions)
+            .filter(([_, isChecked]) => isChecked)
+            .map(([subject]) => subject);
 
-        // Add custom subject if provided
-        if (customSubject.trim()) {
-          selectedSubjectsForInterest.push(customSubject.trim());
-        }
+          // Add custom subject if provided
+          if (customSubject.trim()) {
+            currentlySelectedSubjects.push(customSubject.trim());
+          }
 
-        if (selectedSubjectsForInterest.length === 0) {
-          alert('Please select at least one subject or enter a custom subject');
-          return;
-        }
+          if (currentlySelectedSubjects.length === 0) {
+            alert('Please select at least one subject or enter a custom subject');
+            return;
+          }
 
-        setSubjects(selectedSubjectsForInterest); // Update state for display later
-        const interests = await callTool('interest', selectedSubjectsForInterest.join(', '));
-        setOptions(interests);
-        setStep(2);
-        break;
-      case 2:
-        setInterest(value!);
-        const courses = await callTool('course', { interest: value, group });
-        setOptions(courses);
-        setStep(3);
-        break;
-      case 3:
-        setCourse(value!);
-        const colleges = await callTool('college', value);
-        setOptions(colleges);
-        setStep(4);
-        break;
-      case 4:
-        setCollege(value!);
-        const exams = await callTool('exam', { college: value, course });
-        setOptions(exams);
-        setStep(5);
-        break;
-      case 5:
-        setExam(value!);
-        const cutoffRes = await callTool('cutoff', { exam: value, college });
-        setCutoff(cutoffRes);
+          // Update the 'subjects' state with the final list of selected subjects
+          setSubjects(currentlySelectedSubjects);
 
-        // IMPORTANT CHANGE HERE: Use the 'subjects' state directly or ensure it's fresh
-        // The subjects state was set in step 1, and should be available here.
-        // If 'subjects' could be stale, you might need to re-derive it or pass it explicitly.
-        // Given your flow, `subjects` state should be up-to-date from `setSubjects(selected)` in step 1.
-        const summaryRes = await callTool('summary', {
-          group,
-          subjects: subjects.join(', '), // Access `subjects` from state
-          interest,
-          course,
-          college,
-        });
-        setSummary(summaryRes);
-        setStep(6);
-        break;
+          const interests = await callTool('interest', currentlySelectedSubjects.join(', '));
+          setOptions(interests);
+          setStep(2);
+          break;
+        case 2:
+          setInterest(value!);
+          const courses = await callTool('course', { interest: value, group });
+          setOptions(courses);
+          setStep(3);
+          break;
+        case 3:
+          setCourse(value!);
+          const colleges = await callTool('college', value);
+          setOptions(colleges);
+          setStep(4);
+          break;
+        case 4:
+          setCollege(value!);
+          const exams = await callTool('exam', { college: value, course });
+          setOptions(exams);
+          setStep(5);
+          break;
+        case 5:
+          setExam(value!);
+          const cutoffRes = await callTool('cutoff', { exam: value, college });
+          setCutoff(cutoffRes);
+
+          // The 'subjects' state should be populated from 'case 1' by now
+          // If you were to debug 'subjects' here, it should hold the correct value.
+          const summaryRes = await callTool('summary', {
+            group,
+            subjects: subjects.join(', '), // Using the 'subjects' state here
+            interest,
+            course,
+            college,
+          });
+          setSummary(summaryRes);
+          setStep(6);
+          break;
+      }
+    } catch (error) {
+      console.error("Error in handleNext:", error);
+      alert(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
+      // Optionally, reset the step or provide more specific user feedback
     }
   };
 
@@ -116,23 +158,33 @@ export default function CareerCounselorPage() {
   };
 
   const startOver = async () => {
-    const groups = await callTool('subject_group');
-    setOptions(groups);
-    setGroup('');
-    setSubjects([]);
-    setCustomSubject('');
-    setInterest('');
-    setCourse('');
-    setCollege('');
-    setExam('');
-    setCutoff('');
-    setSummary('');
-    setSelectedOptions({});
-    setStep(0);
+    try {
+      const groups = await callTool('subject_group');
+      setOptions(groups);
+      setGroup('');
+      setSubjects([]);
+      setCustomSubject('');
+      setInterest('');
+      setCourse('');
+      setCollege('');
+      setExam('');
+      setCutoff('');
+      setSummary('');
+      setSelectedOptions({});
+      setStep(0);
+    } catch (error) {
+      console.error("Error starting over:", error);
+      alert(`Could not start over: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
-  // Initial load
-  if (options.length === 0 && step === 0) startOver();
+  // Initial load: Only call startOver if options are empty AND baseUrl is set (client-side)
+  // This prevents it from firing on the server where baseUrl is initially empty.
+  useEffect(() => {
+    if (options.length === 0 && step === 0 && baseUrl) {
+      startOver();
+    }
+  }, [options.length, step, baseUrl]); // Re-run if these dependencies change
 
   return (
     <main className="p-6 max-w-xl mx-auto text-center space-y-4">
@@ -142,8 +194,8 @@ export default function CareerCounselorPage() {
           <p className="text-lg font-semibold">
             {[
               'Choose your subject group:',
-              `What are the subjects in ${group}?`,
-              `What's your interest in ${subjects.join(', ')}?`,
+              `What are the subjects in ${group}?`, // Corrected to use backticks
+              `What's your interest in ${subjects.join(', ')}?`, // Corrected to use backticks
               `Choose a course related to ${interest}:`,
               `Select a college offering ${course}:`,
               `Select an entrance exam for ${college}:`,
@@ -219,7 +271,7 @@ export default function CareerCounselorPage() {
           <p>🎯 Exam Cutoff for <b>{exam}</b>: <br /> <code>{cutoff}</code></p>
           <p>📘 Subjects: {subjects.join(', ')}</p>
           <p>📘 Summary:</p>
-          <blockquote className="bg-gray-100 p-4 rounded">{summary}</blockquote>
+          <blockquote className="bg-gray-100 p-4 rounded text-black">{summary}</blockquote>
           <button
             className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
             onClick={startOver}
