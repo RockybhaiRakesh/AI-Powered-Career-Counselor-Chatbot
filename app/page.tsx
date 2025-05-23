@@ -1,10 +1,11 @@
+// page.tsx
 'use client';
 
 import { useState } from 'react';
 
 export default function CareerCounselorPage() {
   const [group, setGroup] = useState('');
-  const [subjects, setSubjects] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]); // This state is still useful for display
   const [customSubject, setCustomSubject] = useState('');
   const [interest, setInterest] = useState('');
   const [course, setCourse] = useState('');
@@ -29,33 +30,33 @@ export default function CareerCounselorPage() {
     switch (step) {
       case 0:
         setGroup(value!);
-        const subjects = await callTool('subject', value);
-        setOptions(subjects);
+        const subjectsInitial = await callTool('subject', value); // Renamed to avoid conflict
+        setOptions(subjectsInitial);
         // Initialize selectedOptions with all false
-        setSelectedOptions(subjects.reduce((acc: Record<string, boolean>, curr: string) => {
-  acc[curr] = false;
-  return acc;
-}, {}));
+        setSelectedOptions(subjectsInitial.reduce((acc: Record<string, boolean>, curr: string) => {
+          acc[curr] = false;
+          return acc;
+        }, {}));
         setStep(1);
         break;
       case 1:
         // Get all selected subjects
-        const selected = Object.entries(selectedOptions)
+        const selectedSubjectsForInterest = Object.entries(selectedOptions) // Renamed for clarity
           .filter(([_, isChecked]) => isChecked)
           .map(([subject]) => subject);
-        
+
         // Add custom subject if provided
         if (customSubject.trim()) {
-          selected.push(customSubject.trim());
+          selectedSubjectsForInterest.push(customSubject.trim());
         }
-        
-        if (selected.length === 0) {
+
+        if (selectedSubjectsForInterest.length === 0) {
           alert('Please select at least one subject or enter a custom subject');
           return;
         }
-        
-        setSubjects(selected);
-        const interests = await callTool('interest', selected.join(', '));
+
+        setSubjects(selectedSubjectsForInterest); // Update state for display later
+        const interests = await callTool('interest', selectedSubjectsForInterest.join(', '));
         setOptions(interests);
         setStep(2);
         break;
@@ -81,9 +82,14 @@ export default function CareerCounselorPage() {
         setExam(value!);
         const cutoffRes = await callTool('cutoff', { exam: value, college });
         setCutoff(cutoffRes);
+
+        // IMPORTANT CHANGE HERE: Use the 'subjects' state directly or ensure it's fresh
+        // The subjects state was set in step 1, and should be available here.
+        // If 'subjects' could be stale, you might need to re-derive it or pass it explicitly.
+        // Given your flow, `subjects` state should be up-to-date from `setSubjects(selected)` in step 1.
         const summaryRes = await callTool('summary', {
           group,
-          subjects: subjects.join(', '),
+          subjects: subjects.join(', '), // Access `subjects` from state
           interest,
           course,
           college,
@@ -143,7 +149,7 @@ export default function CareerCounselorPage() {
               `Select an entrance exam for ${college}:`,
             ][step]}
           </p>
-          
+
           {step === 1 ? (
             <div className="mt-4 space-y-3">
               <div className="flex items-center mb-2">
@@ -156,7 +162,7 @@ export default function CareerCounselorPage() {
                 />
                 <label htmlFor="selectAll">Select All</label>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-2">
                 {options.map((opt, idx) => (
                   <div key={idx} className="flex items-center">
@@ -171,7 +177,7 @@ export default function CareerCounselorPage() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="mt-4">
                 <label htmlFor="customSubject" className="block mb-2">Or enter a custom subject:</label>
                 <input
@@ -183,7 +189,7 @@ export default function CareerCounselorPage() {
                   placeholder="Enter your subject"
                 />
               </div>
-              
+
               <button
                 className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 onClick={() => handleNext()}
