@@ -27,39 +27,30 @@ export default function CareerCounselorPage() {
     }
   }, []); // Empty dependency array means this runs once on mount
 
-  const callTool = async (tool: string, input?: any) => {
-    // Construct the full URL using the baseUrl
-    // If baseUrl is not yet available (e.g., during initial server render before useEffect),
-    // it will default to an empty string, causing /api/tool to be relative.
-    // This is generally handled by Next.js in development, but for robust production,
-    // ensure server-side calls have an absolute URL or use environment variables.
-    const url = `${baseUrl}/api/tool`;
+  const callTool = async (tool: string, input?: string | { [key: string]: any }): Promise<any> => {
+  // You might still get 'any' here if you return 'any' from res.json()
+  // For more specific types, you'd need conditional typing or function overloads.
+  // For now, let's focus on the 'input' parameter.
+  const url = `${baseUrl}/api/tool`;
 
-    // Added a check to log if baseUrl is missing on the client side
-    // This won't directly fix SSR issues, but helps debug if client fetch fails
-    if (!baseUrl && typeof window !== 'undefined') {
-      console.warn('Base URL not yet set for API call on client. This might cause issues if not configured.');
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool, input }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(`API call failed for tool "${tool}": ${errorData.error || res.statusText}`);
     }
 
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool, input }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(`API call failed for tool "${tool}": ${errorData.error || res.statusText}`);
-      }
-
-      return res.json();
-    } catch (error) {
-      console.error(`Error in callTool (${tool}):`, error);
-      // Depending on your error handling strategy, you might want to re-throw or return a default
-      throw error; // Re-throw to propagate the error for client-side handling
-    }
-  };
+    return res.json();
+  } catch (error) {
+    console.error(`Error in callTool (${tool}):`, error);
+    throw error;
+  }
+};
 
   const handleNext = async (value?: string) => {
     try { // Added a try-catch block for overall error handling in handleNext
