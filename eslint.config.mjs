@@ -11,15 +11,11 @@ const compat = new flatcompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-  {
-    // This is the object where you define your custom rules
+  ...compat.extends("next/core-web-vitals", "next/typescript", {
     rules: {
-      // Add this line to set the rule
-      "@typescript-eslint/no-explicit-any": "warn", // Or "off"
-      // Keep any other existing rules here if you have them
+      "@typescript-eslint/no-explicit-any": "off",
     },
-  },
-];
+  }),
+]
 
 export default eslintConfig;
