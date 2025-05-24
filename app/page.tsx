@@ -227,7 +227,7 @@ export default function CareerCounselorPage() {
       {/* GIF Background - This is the absolute outermost background layer */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-30"
-        style={{ backgroundImage: "url('https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXhkY2ZydTgyZjd1NDhoenYweXVmYmNtdHNkejhibGl4NXN1czhiMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6YBVtuR3Bt8PcVoULu/giphy.gif')" }}
+        style={{ backgroundImage: "url('https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYXJkMHZwMWFpeWR0cHhoNWhwbW1vMzkzeHZsaXN2NG4yNDNwM2Z0NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ITRemFlr5tS39AzQUL/giphy.gif')" }}
       ></div>
 
       {/* Layered radial gradients for RGB 3D effect - These are above the GIF */}
@@ -237,11 +237,11 @@ export default function CareerCounselorPage() {
 
       {/* Main Content Card - This is the top layer */}
       <div className="relative z-10 bg-white bg-opacity-95 p-10 rounded-3xl shadow-3xl max-w-2xl w-full text-center space-y-8 border-t-8 border-b-8 border-l-4 border-r-4 border-gradient-to-r from-blue-600 via-purple-600 to-red-600 transform perspective-1000 rotateY-3D animate-card-appear">
-        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-lg leading-tight mb-6" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1), 4px 4px 0px rgba(70,130,180,0.3), 6px 6px 0px rgba(138,43,226,0.2)' }}>
-          <span className="inline-block transform rotate-[-5deg] text-red-600 mr-2">🚀</span>
-          AI POWERED CAREER COUNSELING BOT
-          <span className="inline-block transform rotate-[5deg] text-green-600 ml-2">💡</span>
-        </h1>
+      <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-lg leading-tight mb-6" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1), 4px 4px 0px rgba(70,130,180,0.3), 6px 6px 0px rgba(138,43,226,0.2)' }}>
+  <span className="inline-block transform rotate-[-5deg] text-red-600 mr-2">🚀</span>
+  AI POWERED CAREER COUNSELING BOT<span className="inline-block transform rotate-[5deg] text-green-600 ml-2">💡</span> 
+</h1>
+
 
         {error && (
           <div className="bg-red-200 border-l-4 border-red-600 text-red-900 px-6 py-4 rounded-md relative text-left shadow-md transform translateZ-10 animate-fade-in">
@@ -256,7 +256,7 @@ export default function CareerCounselorPage() {
               {[
                 'Choose your **12TH subject group** to begin your journey:',
                 `Alright, let's select the **subjects** within ${group}:`,
-                `Intriguing! What sparks your primary **interests** from these subjects?`,
+                `Intriguing! your **interests** with in ${subjects} `,
                 `Excellent! Now, explore potential **courses** that align with your interests:`,
                 `Fantastic! Next, select a **college** where you envision yourself studying ${course}:`,
                 `Almost there! Finally, pick an **entrance exam** relevant to ${college} and ${course}:`,
@@ -265,11 +265,16 @@ export default function CareerCounselorPage() {
 
             {isLoading && (
               <div className="mt-6 text-blue-700 font-bold text-xl flex items-center justify-center animate-pulse-fade transform translateZ-20">
-                <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                {/* <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Fetching exciting options for you...
+                </svg> */}
+                <img 
+  src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjdqbDd5eXh1dm5oeHcweDA1NGV2YTE4cDdpMGY3NTFpeXh2OTB2ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/UQVRBjPL7Kd5NR7ZCt/giphy.gif" 
+  alt="AI Bot GIF" 
+  className="w-28 h-28 inline-block "
+/>
+
               </div>
             )}
 
@@ -309,14 +314,14 @@ export default function CareerCounselorPage() {
 
                 {step === 1 && (
                   <div className="mt-6 transform translateZ-50 animate-fade-in-up-stagger">
-                    <label htmlFor="customSubject" className="block mb-3 text-gray-800 text-lg font-medium text-shadow-sm">Or add your own **unique subject(s)** (comma-separated):</label>
+                    <label htmlFor="customSubject" className="block mb-3 text-gray-800 text-lg font-medium text-shadow-sm">Add your languange subject in 12th Group:</label>
                     <input
                       type="text"
                       id="customSubject"
                       value={customSubject}
                       onChange={(e) => setCustomSubject(e.target.value)}
                       className="border border-blue-500 p-4 w-full rounded-lg shadow-lg focus:ring-blue-700 focus:border-blue-700 text-black placeholder-gray-500 text-lg bg-blue-50 transition duration-200 ease-in-out transform hover:scale-100.5"
-                      placeholder="e.g., Data Science, Renewable Energy, Digital Art"
+                      placeholder="e.g., Tamil, Hindi, French  (your optional choice)"
                     />
                   </div>
                 )}

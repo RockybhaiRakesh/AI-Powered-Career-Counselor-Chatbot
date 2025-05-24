@@ -8,7 +8,7 @@ Science with Biology
 Science with Computer
 Commerce with Maths
 Commerce without Maths
-Humanities / Arts
+Humanities / Arts only show 6 groups only
 
 Now generate the actual list.`; // The example format is part of the prompt for clarity
 

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "career-counselor-mcp": "file:",
     "dotenv": "^16.5.0",
     "next": "15.3.2",
     "react": "^19.0.0",

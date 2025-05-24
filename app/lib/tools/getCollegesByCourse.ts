@@ -4,7 +4,7 @@ export const getCollegesByCourse = async (
   course: string
 ): Promise<string[]> => {
   const prompt = `
-You are an AI career assistant. List top colleges in India offering the course "${course}". Include both:
+You are an AI career assistant. List top  50+ colleges in India offering the course "${course}". Include both:
 
 - Top colleges from **all over India**
 - Reputed colleges from **Tamil Nadu**

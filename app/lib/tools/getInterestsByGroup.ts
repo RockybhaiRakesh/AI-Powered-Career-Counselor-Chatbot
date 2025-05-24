@@ -17,7 +17,7 @@ For the "${group}" group, list **all possible relevant subjects**, including:
 3.  **Specialized/Niche Electives:** Less common but officially recognized subjects offered by some boards or schools, including those with vocational or skill-based focuses.
 4.  **Emerging Skill-Based/Vocational Subjects:** Newer subjects introduced under reforms like NEP 2020.
 
-Aim to provide a very extensive list, striving for **50+ unique subjects** if applicable to the group.
+Aim to provide a very extensive list, striving for **5000+ based on "${group}" unique subjects** if applicable to the group.
 
 - Present the subjects as a single, continuous bulleted list (e.g., - Subject Name).
 - Do NOT categorize them under "Compulsory," "Optional," etc., just provide one long list.
