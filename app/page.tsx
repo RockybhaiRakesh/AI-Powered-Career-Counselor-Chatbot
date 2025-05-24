@@ -100,10 +100,7 @@ export default function CareerCounselorPage() {
           const interests = await callTool('interest', currentlySelectedSubjects.join(', '));
           if (interests) {
             setOptions(interests);
-            setSelectedOptions(interests.reduce((acc: Record<string, boolean>, curr: string) => {
-              acc[curr] = false;
-              return acc;
-            }, {}));
+            setSelectedOptions(interests.reduce((acc: Record<string, boolean>, curr: string) => ({ ...acc, [curr]: false }), {}));
             setStep(2);
           }
           break;
@@ -226,13 +223,19 @@ export default function CareerCounselorPage() {
   }, [options.length, step, baseUrl, startOver]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-700 to-purple-500 p-6 flex flex-col items-center justify-center font-sans">
-      {/* Background - Multiple overlapping radial gradients for RGB 3D effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-purple-900 to-black opacity-80 animate-bg-pulse"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-red-800 via-pink-800 to-transparent opacity-60 animate-bg-pulse-delay"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_right,_var(--tw-gradient-stops))] from-green-700 via-yellow-700 to-transparent opacity-40 animate-bg-pulse-more-delay"></div>
+    <main className="min-h-screen relative overflow-hidden font-sans p-6 flex flex-col items-center justify-center">
+      {/* GIF Background - This is the absolute outermost background layer */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-30"
+        style={{ backgroundImage: "url('https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXhkY2ZydTgyZjd1NDhoenYweXVmYmNtdHNkejhibGl4NXN1czhiMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6YBVtuR3Bt8PcVoULu/giphy.gif')" }}
+      ></div>
 
-      {/* Main Content Card */}
+      {/* Layered radial gradients for RGB 3D effect - These are above the GIF */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-purple-900 to-black opacity-80 animate-bg-pulse -z-20"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-red-800 via-pink-800 to-transparent opacity-60 animate-bg-pulse-delay -z-20"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_right,_var(--tw-gradient-stops))] from-green-700 via-yellow-700 to-transparent opacity-40 animate-bg-pulse-more-delay -z-20"></div>
+
+      {/* Main Content Card - This is the top layer */}
       <div className="relative z-10 bg-white bg-opacity-95 p-10 rounded-3xl shadow-3xl max-w-2xl w-full text-center space-y-8 border-t-8 border-b-8 border-l-4 border-r-4 border-gradient-to-r from-blue-600 via-purple-600 to-red-600 transform perspective-1000 rotateY-3D animate-card-appear">
         <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-lg leading-tight mb-6" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1), 4px 4px 0px rgba(70,130,180,0.3), 6px 6px 0px rgba(138,43,226,0.2)' }}>
           <span className="inline-block transform rotate-[-5deg] text-red-600 mr-2">🚀</span>
