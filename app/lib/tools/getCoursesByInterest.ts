@@ -1,15 +1,28 @@
+// src/lib/tools/getCoursesByInterest.ts
 import { model } from '../gemini';
 
 export const getCoursesByInterest = async (
-  interest: string,
+  interest: string[], // Expects an array of strings
   group: string
 ): Promise<string[]> => {
-  const prompt = `
-You are an AI career counselor. Suggest 5000+ **Undergraduate (UG)** degree programs for a student interested in "${interest}" with a "${group}" academic background.
+  if (!model) {
+    console.error("Gemini model is not initialized. Cannot fetch UG courses.");
+    return [];
+  }
 
-- Only include **UG programs** like B.Sc, B.A., B.Tech, B.Com, etc.
-- Format the response as a **numbered list** (e.g., 1. B.Sc in Physics).
-- Do **not** include explanations or descriptions — only the degree names.
+  const interestsList = interest.join(', '); // Join for the prompt
+
+  const prompt = `
+You are an AI career counselor specializing in Indian higher education.
+Based on a student's interests: **${interestsList}** and academic background: "${group}",
+list **only officially recognized and commonly offered Undergraduate (UG) degree programs** in India that directly and strongly align with these inputs.
+
+- Include UG programs such as B.Sc, B.Tech, B.Com, B.A, B.Ed, BBA, BCA, MBBS, B.Arch, etc.
+- Focus strictly on programs where the listed interests and academic group are a clear and direct foundation.
+- Do NOT invent programs or list those not genuinely available as UG degrees in India.
+- Format as a **numbered list** (e.g., 1. B.Sc in Physics).
+- Provide only the degree names, no explanations or descriptions.
+- Ensure the list is relevant and accurate based on common Indian university offerings.
 `;
 
   try {
