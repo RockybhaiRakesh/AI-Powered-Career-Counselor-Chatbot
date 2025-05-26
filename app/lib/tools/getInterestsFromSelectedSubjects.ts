@@ -11,15 +11,34 @@ export const getInterestsFromSelectedSubjects = async (
 
   const subjectsList = selectedSubjects.join(', ');
 
+//   const prompt = `
+// For a 12th standard student who has studied: **${subjectsList}**,
+// list a **broad and extensive range of career-related interests, specialized fields, and emerging interdisciplinary areas**.
+
+// Prioritize strong connections to the listed subjects, including both direct career paths and logical extensions into related or interdisciplinary fields. Include both traditional and modern/future-oriented areas.
+
+// - Provide only the interest names.
+// - Format as a **bulleted list** (e.g., - Artificial Intelligence, - Quantum Computing).
+// - No introductory/concluding sentences, explanations, or descriptions.
+// `;
   const prompt = `
-For a 12th standard student who has studied: **${subjectsList}**,
-list a **broad and extensive range of career-related interests, specialized fields, and emerging interdisciplinary areas**.
+Given the 12th standard subjects: ${subjectsList}, generate an extensive list of highly relevant career-related interests and specialized fields.
 
-Prioritize strong connections to the listed subjects, including both direct career paths and logical extensions into related or interdisciplinary fields. Include both traditional and modern/future-oriented areas.
+For each subject, including languages like Tamil, identify direct applications, interdisciplinary connections, and emerging areas where these subjects are foundational. The goal is to provide a comprehensive set of options for a student exploring career paths.
 
-- Provide only the interest names.
-- Format as a **bulleted list** (e.g., - Artificial Intelligence, - Quantum Computing).
-- No introductory/concluding sentences, explanations, or descriptions.
+Format your output as a single bulleted list, with each interest on a new line prefixed by a hyphen. Do not include any introductory or concluding sentences, explanations, or descriptions.
+
+Example of desired format for a few interests:
+- Software Development
+- Medical Research
+- Data Science
+- Literary Criticism
+- Renewable Energy
+- Financial Analysis
+- Content Creation
+- Robotics Engineering
+- Public Health Policy
+- Linguistics
 `;
 
   try {

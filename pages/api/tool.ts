@@ -1,16 +1,27 @@
-// pages/api/tool.ts (Confirm this is exactly what you have)
+// pages/api/tool.ts (or app/api/tool/route.ts for App Router)
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSubjectGroups } from '@/app/lib/tools/getSubjectGroups';
-import { getSelectSubjects} from '@/app/lib/tools/getSelectsubject';
-import { getInterestsFromSelectedSubjects } from '@/app/lib/tools/getInterestsFromSelectedSubjects'; // Corrected import
+import { getSelectSubjects } from '@/app/lib/tools/getSelectsubject';
+import { getInterestsFromSelectedSubjects } from '@/app/lib/tools/getInterestsFromSelectedSubjects';
 import { getCoursesByInterest } from '@/app/lib/tools/getCoursesByInterest';
 import { getCollegesByCourse } from '@/app/lib/tools/getCollegesByCourse';
 import { getExamsByCollege } from '@/app/lib/tools/getExamsByCollege';
 import { getCutoffForExam } from '@/app/lib/tools/getCutoffForExam';
 import { getCareerPathSummary } from '@/app/lib/tools/getCareerPathSummary';
+import { getChatResponse } from '@/app/lib/tools/chat';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Ensure the request method is POST, as this API is designed to receive data.
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed. This endpoint only supports POST requests.' });
+  }
+
   const { tool, input }: { tool: string; input?: any } = req.body;
+
+  // Basic validation for the 'tool' parameter
+  if (!tool) {
+    return res.status(400).json({ error: 'Missing "tool" parameter in request body.' });
+  }
 
   try {
     switch (tool) {
@@ -21,11 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.json(await getSelectSubjects(input as string));
 
       case 'interest':
-        // getInterestsFromSelectedSubjects expects string[] for selectedSubjects
-        return res.json(await getInterestsFromSelectedSubjects(input as string[])); // CORRECTED
+        return res.json(await getInterestsFromSelectedSubjects(input as string[]));
 
       case 'course':
-        // getCoursesByInterest expects an object { interest: string[], group: string }
         interface CourseInput { interest: string[]; group: string; }
         const courseInput = input as CourseInput;
         return res.json(await getCoursesByInterest(courseInput.interest, courseInput.group));
@@ -56,11 +65,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const summaryInput = input as SummaryInput;
         return res.json(await getCareerPathSummary(summaryInput));
 
+      case 'chat':
+        // This line is correct as getChatResponse returns { content: "text" }
+        return res.json(await getChatResponse(input as { role: string, content: string }[]));
+
       default:
-        return res.status(400).json({ error: 'Invalid tool name' });
+        return res.status(400).json({ error: 'Invalid tool name provided.' });
     }
   } catch (error: any) {
-    console.error("API Tool Error:", error);
-    return res.status(500).json({ error: `Server error while processing tool '${tool}': ${error.message}` });
+    // Log the detailed error on the server side
+    console.error(`API Tool Error processing '${tool}':`, error);
+    // Ensure a valid JSON error response is always sent,
+    // which helps the client-side response.json() avoid "Unexpected end of JSON input".
+    return res.status(500).json({ error: `Server error while processing tool '${tool}': ${error.message || 'An unknown error occurred.'}` });
   }
 }
