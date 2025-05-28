@@ -376,7 +376,7 @@ export default function ChatBot({ onClose }: { onClose: () => void }) {
             id="language-select"
             value={selectedLanguage}
             onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-black border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isLoading || isSpeakingAuto || isListening} // Disable if bot is busy
           >
             {availableLanguages.map(lang => (
@@ -394,14 +394,14 @@ export default function ChatBot({ onClose }: { onClose: () => void }) {
               userInteractedRef.current = true; // Mark user interaction on typing
             }}
             placeholder="Ask me anything about careers..."
-            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 text-black border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isLoading || isSpeakingAuto || isListening} // Disable if bot is busy
           />
           {/* Microphone button */}
           <button
             type="button" // Important: set to "button" to prevent form submission
             onClick={isListening ? stopListening : startListening}
-            className={`px-4 py-2 text-white transition-colors duration-200 ${
+            className={`px-4 py-2 text-black transition-colors duration-200 ${
               isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'
             } focus:outline-none focus:ring-2 focus:ring-blue-500`}
             disabled={isLoading || isSpeakingAuto} // Disable if loading or bot is speaking

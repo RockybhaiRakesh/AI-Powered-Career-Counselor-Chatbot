@@ -1,9 +1,11 @@
 // app/page.tsx
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import ChatBot from '@/app/components/ChatBot';
-import Navbar from '@/app/components/Navbar'; // <--- Import the Navbar component
+import Navbar from '@/app/components/Navbar';
+import FlowChart from '@/app/components/FlowChart'; // Import the FlowChart component
 
 type ToolInput = string | { [key: string]: any };
 
@@ -47,6 +49,17 @@ export default function CareerCounselorPage() {
       setBaseUrl(window.location.origin);
     }
   }, []);
+
+  // Generate flow chart steps based on current selections
+  const flowSteps = useMemo(() => [
+    { title: 'Subject Group', value: group },
+    { title: 'Subjects', value: subjects },
+    { title: 'Interests', value: interest },
+    { title: 'Course', value: course },
+    { title: 'College', value: college },
+    { title: 'Exam', value: exam },
+    { title: 'Summary', value: '' } // Summary step itself doesn't have a selection value here
+  ], [group, subjects, interest, course, college, exam]);
 
   const callTool = useCallback(async (tool: string, input?: ToolInput): Promise<any> => {
     if (!baseUrl) {
@@ -296,12 +309,11 @@ export default function CareerCounselorPage() {
   }, [options, searchQuery, step]);
 
   return (
-    <> {/* Use a React Fragment to wrap the Navbar and main content */}
-      <Navbar /> {/* <--- Render the Navbar component here */}
+    <>
+      <Navbar />
 
-      {/* Add padding to the top of your main content to prevent it from being hidden
-          behind the fixed Navbar. Adjust 'pt-20' if your navbar height is different. */}
-      <main className="min-h-screen relative overflow-hidden font-sans p-6 flex flex-col items-center justify-center pt-20"> {/* <--- Added pt-20 */}
+      <main className="min-h-screen relative overflow-hidden font-sans p-100 flex justify-center items-start pt-40 pl-30"> {/* Changed to flex, justify-center, items-start */}
+        {/* Backgrounds */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat -z-30"
           style={{ backgroundImage: "url('https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYXJkMHZwMWFpeWR0cHhoNWhwbW1vMzkzeHZsaXN2NG4yNDNwM2Z0NCZlcD1MVjEwVEtYdWRwMzNTRllXUDdYQkxQNFYtZ1pWNTQ0USZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ITRemFlr5tS39AzQUL/giphy.gif')" }}
@@ -311,7 +323,16 @@ export default function CareerCounselorPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-red-800 via-pink-800 to-transparent opacity-60 animate-bg-pulse-delay -z-20"></div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_right,_var(--tw-gradient-stops))] from-green-700 via-yellow-700 to-transparent opacity-40 animate-bg-pulse-more-delay -z-20"></div>
 
-        <div className="relative z-10 bg-white bg-opacity-95 p-10 rounded-3xl shadow-2xl max-w-2xl w-full text-center space-y-8 border-t-8 border-b-8 border-l-4 border-r-4 border-gradient-to-r from-blue-600 via-purple-600 to-red-600 transform perspective-1000 rotateY-3D animate-card-appear">
+        {/* Flow Chart Container (Left Side) */}
+        <div className="relative z-10 w-1/4 pt-8 sticky top-20 h-fit"> {/* Changed width, removed pr-8, added sticky and top-20 */}
+          {/* Always render FlowChart for persistent display on the left */}
+          <div className="flex justify-end"> {/* Use flex justify-end to align flowchart to the right within its container */}
+            <FlowChart steps={flowSteps} currentStep={step} />
+          </div>
+        </div>
+
+        {/* Main Content Card (Center) */}
+        <div className="relative z-10 bg-white bg-opacity-95 p-10 rounded-3xl shadow-2xl w-2/4 mx-auto text-center space-y-8 border-t-8 border-b-8 border-l-4 border-r-4 border-gradient-to-r from-blue-600 via-purple-600 to-red-600 transform perspective-1000 rotateY-3D animate-card-appear"> {/* Changed width to w-2/4, added mx-auto, removed max-w-2xl */}
           <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-lg leading-tight mb-6" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1), 4px 4px 0px rgba(70,130,180,0.3), 6px 6px 0px rgba(138,43,226,0.2)' }}>
             <span className="inline-block transform rotate-[-5deg] text-red-600 mr-2">🚀</span>
             AI POWERED CAREER COUNSELING BOT<span className="inline-block transform rotate-[5deg] text-green-600 ml-2">💡</span>
@@ -457,6 +478,8 @@ export default function CareerCounselorPage() {
 
           {step === 6 && (
             <div className="text-left space-y-6 mt-10 bg-blue-50 p-8 rounded-3xl border-l-8 border-r-8 border-blue-700 shadow-3xl animate-fade-in-up">
+              {/* Removed FlowChart here to avoid duplicate or misplaced chart */}
+              
               <h2 className="text-3xl font-bold text-blue-900 mb-5 text-shadow-md">🌟 Your Personalized Career Compass Points To:</h2>
               <p className="text-gray-800 text-xl">
                 🎯 **Predicted Exam Cutoff for {exam}**: <br />
@@ -488,7 +511,7 @@ export default function CareerCounselorPage() {
         {!showChat && (
           <button
             onClick={() => setShowChat(true)}
-            className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-xl hover:bg-blue-700 transition duration-200 z-40 animate-bounce"
+            className="fixed bottom-6 right-6 bg-blue-600 text-black p-4 rounded-full shadow-xl hover:bg-blue-700 transition duration-200 z-40 animate-bounce"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
