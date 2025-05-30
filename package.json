@@ -2,17 +2,22 @@
   "name": "career-counselor-mcp",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "deploy": "vercel",
-    "deploy:prod": "vercel --prod"
+    "deploy:prod": "vercel --prod",
+    "seed-db": "node --loader ts-node/esm scripts/embedData.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@langchain/google-genai": "^0.2.10",
+    "@pinecone-database/pinecone": "^6.0.1",
     "@types/three": "^0.176.0",
+    "@xenova/transformers": "^2.17.2",
     "career-counselor-mcp": "file:",
     "chromadb": "^2.4.6",
     "dotenv": "^16.5.0",
@@ -20,15 +25,18 @@
     "jspdf": "^3.0.1",
     "mermaid": "^11.6.0",
     "next": "15.3.2",
+    "pg": "^8.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.176.0"
+    "three": "^0.176.0",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4",
     "@types/dom-webcodecs": "^0.1.15",
     "@types/node": "^20",
+    "@types/pg": "^8.15.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.27.0",
