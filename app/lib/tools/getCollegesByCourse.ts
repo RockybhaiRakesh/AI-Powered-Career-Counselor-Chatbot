@@ -1,8 +1,6 @@
 // src/lib/tools/getCollegesByCourse.ts
-
-import db from '../db'; // Assuming this is your PostgreSQL database connection setup
 import { model } from '../gemini'; // Assuming this imports your initialized Gemini model
-
+import db from '../db'; // Assuming this is your PostgreSQL database connection setup
 // Helper function to get timestamp in "YYYY-MM-DD HH:MM:SS" format
 const getTimestamp = () => {
   const now = new Date();
