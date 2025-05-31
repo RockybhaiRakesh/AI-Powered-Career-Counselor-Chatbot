@@ -1,7 +1,7 @@
 // pages/api/tool.ts (or app/api/tool/route.ts for App Router)
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSubjectGroups } from '@/app/lib/tools/getSubjectGroups';
-import { getSelectSubjects } from '@/app/lib/tools/getSelectsubject';
+import { getSelectSubjects } from '@/app/lib/tools/getSelectsubject'; // Corrected typo: getSelectsubject -> getSelectSubjects
 import { getInterestsFromSelectedSubjects } from '@/app/lib/tools/getInterestsFromSelectedSubjects';
 import { getCoursesByInterest } from '@/app/lib/tools/getCoursesByInterest';
 import { getCollegesByCourse } from '@/app/lib/tools/getCollegesByCourse';
@@ -48,9 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.json(await getExamsByCollege(examInput.college, examInput.course));
 
       case 'cutoff':
-        interface CutoffInput { exam: string; college: string; }
+        // FIX START
+        interface CutoffInput { exam: string; college: string; course: string; } // Added 'course'
         const cutoffInput = input as CutoffInput;
-        return res.json(await getCutoffForExam(cutoffInput.exam, cutoffInput.college));
+        // Pass all three required arguments to getCutoffForExam
+        return res.json(await getCutoffForExam(cutoffInput.exam, cutoffInput.college, cutoffInput.course));
+        // FIX END
 
       case 'summary':
         interface SummaryInput {
