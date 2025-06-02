@@ -4,7 +4,7 @@ import db from '../db'; // PostgreSQL database connection setup
 import { model } from '../gemini'; // Gemini model initialization
 
 // Helper to get current timestamp in 'YYYY-MM-DD HH:MM:SS' format
-const getTimestamp = () => {
+const getTimestamp = (): string => {
   const now = new Date();
   return now.toISOString().replace('T', ' ').split('.')[0];
 };
@@ -19,23 +19,22 @@ const getTimestamp = () => {
  * @returns A Promise that resolves to an array of the names of the subjects.
  */
 export const getSelectSubjects = async (group: string): Promise<string[]> => {
+  const client = await db.connect(); // Get a client from the pool for transaction
   try {
     console.info(`[${getTimestamp()}] 🔍 Checking for existing subjects for group "${group}" in the database...`);
 
     // First, get the ID for the given group from the 'subject_groups' table
-    const groupResult = await db.query('SELECT id FROM subject_groups WHERE name = $1', [group]);
+    const groupResult = await client.query('SELECT id FROM subject_groups WHERE name = $1', [group]);
     const groupId = groupResult.rows?.[0]?.id;
 
     if (!groupId) {
-      // If the group itself is not found in the DB, we cannot proceed to check subjects for it.
-      // This implies getSubjectGroups hasn't run or completed for this group.
-      console.error(`[${getTimestamp()}] ❌ Subject group "${group}" not found in the database. Cannot check/add subjects.`);
-      // We still proceed to LLM call in case the group was just created and not yet linked.
-      // However, if the main group isn't in DB, the subject won't be linked correctly.
-      // A more robust solution might involve ensuring getSubjectGroups runs successfully first.
+      console.error(`[${getTimestamp()}] ❌ Subject group "${group}" not found in the database. Ensure 'getSubjectGroups' has run successfully for this group.`);
+      // If the group itself is not found, we cannot link subjects to it.
+      // We will still attempt to get subjects from LLM, but won't save them linked.
+      // The assumption is that `getSubjectGroups` is called first to populate groups.
     } else {
       // If groupId is found, check for existing subjects linked to this groupId
-      const existingSubjectsRes = await db.query(
+      const existingSubjectsRes = await client.query(
         'SELECT name FROM subjects WHERE group_id = $1 ORDER BY name ASC',
         [groupId]
       );
@@ -51,8 +50,22 @@ export const getSelectSubjects = async (group: string): Promise<string[]> => {
     // If no subjects found in DB for this group (or group not found initially), proceed to call the LLM
     console.info(`[${getTimestamp()}] 🚫 No subjects found in DB for "${group}". Calling Gemini LLM...`);
 
-    const prompt = `List the main subjects typically studied in the "${group}" stream in Indian 12th standard education.
-Provide only the subjects as a numbered list, one per line, without any additional text.`;
+    const prompt = `
+You are an expert on the Indian education system.
+List the **main academic subjects** typically studied in the "${group}" stream for the Indian 12th standard education.
+**Strictly adhere to the following format:**
+- Provide only the subjects.
+- One subject per line.
+- No numbering.
+- No introductory or concluding text.
+
+Example (for "Science with Biology"):
+Physics
+Chemistry
+Biology
+English
+Physical Education
+`;
 
     if (!model) {
       console.error(`[${getTimestamp()}] ❌ Gemini model is not initialized. Cannot fetch subjects from LLM.`);
@@ -62,30 +75,35 @@ Provide only the subjects as a numbered list, one per line, without any addition
     const result = await model.generateContent(prompt);
     const subjectsFromLLM = result.response.text()
       .split('\n')
-      .map(item => item.replace(/^\d+\.\s*/, '').trim())
+      .map(item => item.replace(/^\d+\.\s*/, '').trim()) // Remove potential numbering if LLM deviates
       .filter(item => item.length > 0);
 
     console.info(`[${getTimestamp()}] 🧠 Subjects received from Gemini for "${group}":`, subjectsFromLLM);
 
-    // If groupId was found, save the LLM-generated subjects to the database
+    // If groupId was found, save the LLM-generated subjects to the database within a transaction
     if (groupId) {
-      console.info(`[${getTimestamp()}] 💾 Saving LLM-generated subjects for "${group}" to DB...`);
+      console.info(`[${getTimestamp()}] 💾 Saving LLM-generated subjects for "${group}" to DB within a transaction...`);
+      await client.query('BEGIN'); // Start transaction
       for (const subject of subjectsFromLLM) {
-        await db.query(
+        await client.query( // Use client for queries within transaction
           'INSERT INTO subjects (name, group_id, category) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING',
-          [subject, groupId, group] // Use group name as the category
+          [subject, groupId, group] // Use group name as the category for consistency
         );
         console.info(`[${getTimestamp()}] 📥 Successfully inserted/ensured: ${subject}`);
       }
+      await client.query('COMMIT'); // Commit transaction
       console.info(`[${getTimestamp()}] ✅ All LLM-generated subjects for "${group}" saved successfully.`);
     } else {
-      console.warn(`[${getTimestamp()}] ⚠️ Could not save subjects for "${group}" to DB as groupId was not found.`);
+      console.warn(`[${getTimestamp()}] ⚠️ Could not save subjects for "${group}" to DB as groupId was not found. Subjects:`, subjectsFromLLM);
     }
 
     return subjectsFromLLM;
 
   } catch (error) {
+    await client.query('ROLLBACK'); // Rollback on error if transaction was started
     console.error(`[${getTimestamp()}] ❌ Error fetching or saving subjects for group "${group}":`, error);
     return [];
+  } finally {
+    client.release(); // Release the client back to the pool
   }
 };

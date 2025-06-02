@@ -4,7 +4,7 @@ import db from '../db';
 import { model } from '../gemini';
 
 // Helper for consistent timestamp logging
-const getTimestamp = () => {
+const getTimestamp = (): string => {
   const now = new Date();
   return now.toISOString().replace('T', ' ').split('.')[0];
 };
@@ -27,56 +27,69 @@ export const getInterestsFromSelectedSubjects = async (selectedSubjects: string[
     return [];
   }
 
-  // Log the initiation of the process for the given subjects.
+  if (selectedSubjects.length === 0) {
+    console.warn(`[${getTimestamp()}] ⚠️ No subjects provided. Returning empty interests.`);
+    return [];
+  }
+
   console.info(`[${getTimestamp()}] 🎯 Generating career interests for selected subjects:`, selectedSubjects);
 
   let mainCategoryForInterests: string | null = null;
-
-  // Attempt to determine a main category for the generated interests
-  // based on the category of the first selected subject.
-  if (selectedSubjects.length > 0) {
-    const firstSubjectName = selectedSubjects[0];
-    try {
-      console.info(`[${getTimestamp()}] 🔍 Fetching category for subject: '${firstSubjectName}'...`);
-      const subjectCategoryRes = await db.query(
-        'SELECT category FROM subjects WHERE name = $1 LIMIT 1',
-        [firstSubjectName]
-      );
-      if (subjectCategoryRes.rows.length > 0) {
-        mainCategoryForInterests = subjectCategoryRes.rows[0].category;
-        console.info(`[${getTimestamp()}] 📚 Using category "${mainCategoryForInterests}" from subject "${firstSubjectName}".`);
-      } else {
-        console.warn(`[${getTimestamp()}] ⚠️ Category not found in DB for subject: '${firstSubjectName}'. Interests might be saved without a specific category.`);
-      }
-    } catch (error) {
-      console.error(`[${getTimestamp()}] ❌ Error fetching category for subject '${firstSubjectName}':`, error);
-      // Continue without a category if fetching fails
-    }
-  }
-
-  // Prepare the prompt for the LLM based on the selected subjects.
-  const subjectsList = selectedSubjects.join(', ');
-  const prompt = `Given the 12th standard subjects: ${subjectsList}, generate an extensive list of highly relevant career-related interests.
-Provide the interests as a bulleted list, one interest per line, prefixed with a hyphen (e.g., - Software Development). Do not include any introductory or concluding remarks.`;
+  const client = await db.connect(); // Get a client from the pool for transaction
 
   try {
+    // Attempt to determine a main category for the generated interests
+    // based on the category of the first selected subject.
+    const firstSubjectName = selectedSubjects[0];
+    console.info(`[${getTimestamp()}] 🔍 Fetching category for subject: '${firstSubjectName}'...`);
+    const subjectCategoryRes = await client.query( // Use client for queries
+      'SELECT category FROM subjects WHERE name = $1 LIMIT 1',
+      [firstSubjectName]
+    );
+    if (subjectCategoryRes.rows.length > 0) {
+      mainCategoryForInterests = subjectCategoryRes.rows[0].category;
+      console.info(`[${getTimestamp()}] 📚 Using category "${mainCategoryForInterests}" from subject "${firstSubjectName}".`);
+    } else {
+      console.warn(`[${getTimestamp()}] ⚠️ Category not found in DB for subject: '${firstSubjectName}'. Interests might be saved without a specific category.`);
+    }
+
+    // Prepare the prompt for the LLM based on the selected subjects.
+    const subjectsList = selectedSubjects.join(', ');
+    const prompt = `
+You are an expert career counselor.
+Given the 12th standard subjects: **${subjectsList}**, generate a comprehensive list of highly relevant career-related interests.
+**Strictly adhere to the following format:**
+- Provide the interests as a bulleted list.
+- One interest per line.
+- Each line must be prefixed with a hyphen and a space (e.g., - Software Development).
+- Do NOT include any introductory remarks (e.g., "Here are some interests:").
+- Do NOT include any concluding remarks.
+- Do NOT include numbering or any other formatting besides the hyphen.
+- Focus on distinct and actionable interests.
+`;
+
     // 1. Call the LLM to generate interests.
     console.info(`[${getTimestamp()}] 🧠 Sending prompt to Gemini for interest generation...`);
     const result = await model.generateContent(prompt);
-    const text = await result.response.text();
+    const text = result.response.text();
 
     // 2. Parse the LLM's response to extract unique interests.
-    const interests = text.match(/^- (.*)/gm)?.map(item => item.replace(/^- /, '').trim()) || [];
+    // Use a more robust regex to handle potential variations in bullet points, though prompt tries to enforce.
+    const interests = text.split('\n')
+                           .map(line => line.replace(/^[-\*\d\.]*\s*/, '').trim()) // Remove common list prefixes
+                           .filter(item => item.length > 0);
     const uniqueInterests = Array.from(new Set(interests));
     console.info(`[${getTimestamp()}] 📊 Gemini returned ${uniqueInterests.length} unique interests:`, uniqueInterests);
 
-    // 3. Process each unique interest: insert/retrieve and link to subjects.
+    // 3. Process each unique interest: insert/retrieve and link to subjects within a transaction
+    await client.query('BEGIN'); // Start transaction for atomicity
+
     for (const interest of uniqueInterests) {
       let interestId: number | undefined;
 
       // Insert the interest into the 'interests' table.
       // 'ON CONFLICT (name) DO NOTHING' ensures no duplicates and allows retrieval of existing ID.
-      const insertRes = await db.query(
+      const insertRes = await client.query( // Use client for queries
         'INSERT INTO interests (name, category) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING id',
         [interest, mainCategoryForInterests]
       );
@@ -87,7 +100,7 @@ Provide the interests as a bulleted list, one interest per line, prefixed with a
         console.info(`[${getTimestamp()}] 💾 Newly inserted interest: '${interest}' (ID: ${interestId})`);
       } else {
         // If the interest already existed, retrieve its ID.
-        const selectRes = await db.query('SELECT id FROM interests WHERE name = $1', [interest]);
+        const selectRes = await client.query('SELECT id FROM interests WHERE name = $1', [interest]); // Use client
         interestId = selectRes.rows[0]?.id;
         console.info(`[${getTimestamp()}] ℹ️ Interest '${interest}' already exists in DB (ID: ${interestId}).`);
       }
@@ -100,11 +113,11 @@ Provide the interests as a bulleted list, one interest per line, prefixed with a
 
       // 4. Link this interest to each of the selected subjects in 'subject_interests' table.
       for (const subject of selectedSubjects) {
-        const subjectRes = await db.query('SELECT id FROM subjects WHERE name = $1', [subject]);
+        const subjectRes = await client.query('SELECT id FROM subjects WHERE name = $1', [subject]); // Use client
         const subjectId = subjectRes.rows[0]?.id;
 
         if (subjectId) {
-          await db.query(
+          await client.query( // Use client
             'INSERT INTO subject_interests (subject_id, interest_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
             [subjectId, interestId] // 'ON CONFLICT DO NOTHING' prevents duplicate linkages
           );
@@ -115,11 +128,15 @@ Provide the interests as a bulleted list, one interest per line, prefixed with a
       }
     }
 
+    await client.query('COMMIT'); // Commit transaction
     console.info(`[${getTimestamp()}] ✅ All unique interests processed and linked to selected subjects.`);
     return uniqueInterests;
 
   } catch (error) {
+    await client.query('ROLLBACK'); // Rollback on error
     console.error(`[${getTimestamp()}] ❌ Error during interest generation or linking:`, error);
     return []; // Return an empty array on error
+  } finally {
+    client.release(); // Release the client back to the pool
   }
 };
