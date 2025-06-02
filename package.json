@@ -36,12 +36,13 @@
     "@tailwindcss/postcss": "^4",
     "@types/dom-webcodecs": "^0.1.15",
     "@types/node": "^20",
-    "@types/pg": "^8.15.2",
+    "@types/pg": "^8.15.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.27.0",
     "eslint-config-next": "15.3.2",
     "tailwindcss": "^4",
+    "tsx": "^4.19.4",
     "typescript": "^5"
   }
 }
