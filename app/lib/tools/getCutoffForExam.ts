@@ -1,7 +1,6 @@
-// src/lib/tools/getCutoffForExam.ts
-
 import db from '../db';
 import { model } from '../gemini';
+import { log } from '@/app/lib/logger';
 
 // Helper function to get timestamp
 const getTimestamp = (): string => {

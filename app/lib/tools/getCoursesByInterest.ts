@@ -2,6 +2,7 @@
 
 import db from '../db';
 import { model } from '../gemini';
+import { log } from '@/app/lib/logger';
 
 // Helper function to get timestamp
 const getTimestamp = (): string => {
@@ -18,23 +19,28 @@ const getTimestamp = (): string => {
  * @returns A Promise that resolves to an array of relevant course names.
  */
 export const getCoursesByInterest = async (
-  interest: string[], // Expects an array of strings
+  interest: string[],
   group: string
 ): Promise<string[]> => {
-  console.info(`[${getTimestamp()}] INFO: Started fetching UG courses for interests=[${interest.join(', ')}], group="${group}"`);
+  const timestamp = getTimestamp();
+  console.info(`[${timestamp}] INFO: Started fetching UG courses for interests=[${interest.join(', ')}], group="${group}"`);
+  log.info(`[${timestamp}] Started fetching UG courses for interests=[${interest.join(', ')}], group="${group}"`);
 
   if (!model) {
-    console.error(`[${getTimestamp()}] ERROR: Gemini model is not initialized. Cannot fetch UG courses.`);
+    const errorMsg = `[${timestamp}] ERROR: Gemini model is not initialized. Cannot fetch UG courses.`;
+    console.error(errorMsg);
+    log.error(errorMsg);
     return [];
   }
 
   if (interest.length === 0) {
-    console.warn(`[${getTimestamp()}] WARN: No interests provided for course generation. Returning empty array.`);
+    const warnMsg = `[${timestamp}] WARN: No interests provided for course generation. Returning empty array.`;
+    console.warn(warnMsg);
+    log.warn(warnMsg);
     return [];
   }
 
-  const interestsList = interest.join(', '); // Join for the prompt
-
+  const interestsList = interest.join(', ');
   const prompt = `
 You are an AI career counselor specializing in Indian higher education.
 Based on a student's interests: **${interestsList}** and academic background: "${group}",
@@ -50,49 +56,62 @@ list **only officially recognized and commonly offered Undergraduate (UG) degree
 - Ensure the list is relevant and accurate based on common Indian university offerings.
 `;
 
-  const client = await db.connect(); // Get a client from the pool for transaction
+  const client = await db.connect();
   try {
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
-    console.info(`[${getTimestamp()}] INFO: Received courses list from Gemini:\n${text}`);
+    console.info(`[${timestamp}] INFO: Received courses list from Gemini:\n${text}`);
+    log.info(`[${timestamp}] Received courses list from Gemini:\n${text}`);
 
     const courses = text.split('\n')
-      .map((item) => item.replace(/^\d+\.\s*/, '').trim()) // Clean up numbering
+      .map((item) => item.replace(/^\d+\.\s*/, '').trim())
       .filter((item) => item.length > 0);
 
     // Get the group_id for linking courses
     let groupId: number | null = null;
-    let groupCategory: string = group; // Use group name as category for courses too
+    let groupCategory: string = group;
+
     try {
       const groupResult = await client.query('SELECT id FROM subject_groups WHERE name = $1', [group]);
       groupId = groupResult.rows?.[0]?.id || null;
       if (!groupId) {
-        console.warn(`[${getTimestamp()}] WARN: Subject group "${group}" not found for courses. Courses will be saved without a group_id.`);
+        const warnMsg = `[${timestamp}] WARN: Subject group "${group}" not found for courses. Courses will be saved without a group_id.`;
+        console.warn(warnMsg);
+        log.warn(warnMsg);
       }
     } catch (dbError) {
-      console.error(`[${getTimestamp()}] ERROR: Error fetching group ID for "${group}":`, dbError);
+      const errorMsg = `[${timestamp}] ERROR: Error fetching group ID for "${group}": ${dbError}`;
+      console.error(errorMsg);
+      log.error(errorMsg);
     }
 
-    // Save courses to the database within a transaction
-    await client.query('BEGIN'); // Start transaction
+    await client.query('BEGIN');
+
     for (const course of courses) {
       await client.query(
         'INSERT INTO courses (name, group_id, category) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING',
         [course, groupId, groupCategory]
       );
-      console.info(`[${getTimestamp()}] INFO: Saved course "${course}" with group_id=${groupId}, category="${groupCategory}"`);
+      const msg = `[${timestamp}] INFO: Saved course "${course}" with group_id=${groupId}, category="${groupCategory}"`;
+      console.info(msg);
+      log.info(msg);
     }
-    await client.query('COMMIT'); // Commit transaction
 
-    console.info(`[${getTimestamp()}] INFO: Completed saving courses. Total courses saved/fetched: ${courses.length}`);
+    await client.query('COMMIT');
+
+    const successMsg = `[${timestamp}] INFO: Completed saving courses. Total courses saved/fetched: ${courses.length}`;
+    console.info(successMsg);
+    log.info(successMsg);
 
     return courses;
   } catch (error) {
-    await client.query('ROLLBACK'); // Rollback on error
-    console.error(`[${getTimestamp()}] ERROR: Error fetching UG courses:`, error);
+    await client.query('ROLLBACK');
+    const errorMsg = `[${timestamp}] ERROR: Error fetching UG courses: ${error}`;
+    console.error(errorMsg);
+    log.error(errorMsg);
     return [];
   } finally {
-    client.release(); // Release client
+    client.release();
   }
 };

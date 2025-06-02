@@ -1,5 +1,10 @@
-// src/lib/tools/getCareerPathSummary.ts
 import { model } from '../gemini';
+import { log } from '@/app/lib/logger';
+
+const getTimestamp = (): string => {
+  const now = new Date();
+  return now.toISOString().replace('T', ' ').split('.')[0];
+};
 
 export const getCareerPathSummary = async (selected: {
   group: string;
@@ -10,10 +15,10 @@ export const getCareerPathSummary = async (selected: {
   exam: string;
   cutoff: string;
 }) => {
-  console.log('getCareerPathSummary called with:', selected);
+  log.info(`[${getTimestamp()}] getCareerPathSummary called with: ${JSON.stringify(selected)}`);
 
   if (!model) {
-    console.error("Gemini model is not initialized. Cannot generate career path summary.");
+    log.error(`[${getTimestamp()}] Gemini model is not initialized. Cannot generate career path summary.`);
     return 'Error: Career path summary generation failed due to model initialization issue.';
   }
 
@@ -32,13 +37,13 @@ Integrate all these details into a cohesive paragraph or two. Focus on the logic
 `;
 
   try {
-    console.log('Sending prompt to Gemini model...');
+    log.info(`[${getTimestamp()}] Sending prompt to Gemini model...`);
     const result = await model.generateContent(prompt);
     const summary = await result.response.text();
-    console.log('Received career path summary:', summary);
+    log.info(`[${getTimestamp()}] Received career path summary: ${summary}`);
     return summary;
   } catch (error) {
-    console.error('Error generating career path summary:', error);
+    log.error(`[${getTimestamp()}] Error generating career path summary: ${error}`);
     return 'Error: Unable to generate career path summary at this time.';
   }
 };
