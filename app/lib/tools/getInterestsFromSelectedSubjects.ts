@@ -1,6 +1,6 @@
 import db from '../db';
 import { model } from '../gemini';
-import { log } from '@/app/lib/logger'; // Centralized logger
+import { log } from '@/app/lib/logger';
 
 const getTimestamp = (): string => {
   const now = new Date();
@@ -20,14 +20,10 @@ export const getInterestsFromSelectedSubjects = async (
     return [];
   }
 
-  log.info(`[${getTimestamp()}] 🎯 Starting interest generation for selected subjects.`, ['input'], {
-    subjects: selectedSubjects,
-  });
-
-  let mainCategoryForInterests: string | null = null;
   const client = await db.connect();
 
   try {
+    // 1. Get category for first subject
     const firstSubjectName = selectedSubjects[0];
     log.info(`[${getTimestamp()}] 🔍 Retrieving category for subject '${firstSubjectName}'...`, ['db']);
 
@@ -36,13 +32,32 @@ export const getInterestsFromSelectedSubjects = async (
       [firstSubjectName]
     );
 
+    let mainCategoryForInterests: string | null = null;
     if (subjectCategoryRes.rows.length > 0) {
       mainCategoryForInterests = subjectCategoryRes.rows[0].category;
       log.info(`[${getTimestamp()}] ✅ Category found: '${mainCategoryForInterests}'`, ['db']);
     } else {
       log.warn(`[${getTimestamp()}] ⚠️ No category found for subject '${firstSubjectName}'`, ['db']);
+      // Optionally return empty or continue with a fallback category
+      return [];
     }
 
+    // 2. Check if interests already exist for this category
+    log.info(`[${getTimestamp()}] 🔎 Checking existing interests in DB for category '${mainCategoryForInterests}'`, ['db']);
+
+    const existingInterestsRes = await client.query(
+      'SELECT name FROM interests WHERE category = $1',
+      [mainCategoryForInterests]
+    );
+
+    if (existingInterestsRes.rows.length > 0) {
+      // If interests found, return them directly
+      const interestsFromDb = existingInterestsRes.rows.map(row => row.name);
+      log.info(`[${getTimestamp()}] ✅ Found ${interestsFromDb.length} interests in DB, returning cached data.`, ['db']);
+      return interestsFromDb;
+    }
+
+    // 3. If no interests found, generate from LLM
     const subjectsList = selectedSubjects.join(', ');
     const prompt = `
 You are an expert career counselor.
@@ -72,22 +87,16 @@ Given the 12th standard subjects: **${subjectsList}**, generate a comprehensive 
       interests: uniqueInterests,
     });
 
+    // 4. Insert generated interests into DB inside a transaction
     log.info(`[${getTimestamp()}] 🔄 Starting DB transaction for interest linking...`, ['db']);
     await client.query('BEGIN');
 
     for (const interest of uniqueInterests) {
       log.info(`[${getTimestamp()}] ➕ Inserting interest: '${interest}'`, ['db']);
-      const insertRes = await client.query(
-        'INSERT INTO interests (name, category) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING id',
+      await client.query(
+        'INSERT INTO interests (name, category) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
         [interest, mainCategoryForInterests]
       );
-
-      if (insertRes.rows.length > 0) {
-        const interestId = insertRes.rows[0].id;
-        log.info(`[${getTimestamp()}] ✅ Interest inserted with ID: ${interestId}`, ['db']);
-      } else {
-        log.info(`[${getTimestamp()}] ℹ️ Interest '${interest}' already exists in DB.`, ['db']);
-      }
     }
 
     await client.query('COMMIT');
